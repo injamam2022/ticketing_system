@@ -1,0 +1,54 @@
+<?php
+
+use CodeIgniter\Router\RouteCollection;
+
+/** @var RouteCollection $routes */
+$routes->get('/', 'Workspace::index');
+$routes->get('statuses', 'Statuses::index');
+$routes->post('statuses', 'Statuses::save');
+$routes->post('statuses/(:num)', 'Statuses::save/$1');
+$routes->post('statuses/(:num)/move', 'Statuses::move/$1');
+$routes->get('issues/(:num)', 'Workspace::issuePage/$1');
+$routes->get('login', 'Workspace::login');
+$routes->post('login', 'Workspace::authenticate');
+$routes->post('logout', 'Workspace::logout');
+$routes->get('api/workspace', 'Workspace::data');
+$routes->post('api/issues', 'Workspace::saveIssue');
+$routes->post('api/issues/(:num)', 'Workspace::saveIssue/$1');
+$routes->post('api/issues/(:num)/delete', 'Workspace::deleteIssue/$1');
+$routes->get('api/issues/(:num)/comments', 'Workspace::comments/$1');
+$routes->post('api/issues/(:num)/comments', 'Workspace::addComment/$1');
+$routes->post('api/projects', 'Workspace::saveProject');
+$routes->get('api/issues/(:num)/client-conversation', 'Workspace::clientConversation/$1');
+$routes->post('api/issues/(:num)/client-conversation', 'Workspace::replyToClient/$1');
+$routes->get('portal/tickets/(:num)/updates', 'ClientPortal::updates/$1');
+$routes->get('api/issues/(:num)/discussion', 'Discussion::feed/$1');
+$routes->post('api/issues/(:num)/discussion', 'Discussion::save/$1');
+$routes->post('api/issues/(:num)/discussion/(:num)', 'Discussion::save/$1/$2');
+$routes->post('api/issues/(:num)/discussion/(:num)/delete', 'Discussion::delete/$1/$2');
+$routes->post('api/issues/(:num)/discussion/(:num)/react', 'Discussion::react/$1/$2');
+$routes->post('api/issues/(:num)/discussion/(:num)/thread', 'Discussion::thread/$1/$2');
+$routes->post('api/issues/(:num)/discussion/(:num)/issue', 'Discussion::convert/$1/$2');
+$routes->get('api/comment-notifications', 'Discussion::notifications');
+$routes->post('api/comment-notifications/(:num)/read', 'Discussion::readNotification/$1');
+$routes->get('api/comment-attachments/(:num)', 'Discussion::attachment/$1');
+$routes->post('api/comment-attachments/(:num)/remove', 'Discussion::removeAttachment/$1');
+
+$routes->get('team', 'Team::index');
+$routes->post('team', 'Team::save');
+$routes->post('team/(:num)', 'Team::save/$1');
+$routes->get('clients', 'ClientPortal::clients');
+$routes->get('clients/images/(:num)', 'ClientPortal::staffImage/$1');
+$routes->get('portal/images/(:num)', 'ClientPortal::image/$1');
+$routes->post('clients', 'ClientPortal::saveClient');
+$routes->post('clients/(:num)', 'ClientPortal::saveClient/$1');
+$routes->get('clients/tickets/(:num)', 'ClientPortal::staffTicket/$1');
+$routes->post('clients/tickets/(:num)/update', 'ClientPortal::staffUpdate/$1');
+$routes->post('clients/tickets/(:num)/reply', 'ClientPortal::staffReply/$1');
+$routes->get('portal', 'ClientPortal::index');
+$routes->get('portal/login', 'ClientPortal::login');
+$routes->post('portal/login', 'ClientPortal::authenticate');
+$routes->post('portal/logout', 'ClientPortal::logout');
+$routes->post('portal/tickets', 'ClientPortal::submit');
+$routes->get('portal/tickets/(:num)', 'ClientPortal::ticket/$1');
+$routes->post('portal/tickets/(:num)/reply', 'ClientPortal::reply/$1');

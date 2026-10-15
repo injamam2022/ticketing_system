@@ -1,0 +1,7 @@
+Options -Indexes
+RewriteEngine On
+RewriteRule ^$ public/ [R=302,L]
+RewriteRule ^(?:app|writable|vendor|tests|\.git|\.env)(?:/|$) - [F,L,NC]
+<FilesMatch "^(composer\.(json|lock)|env|spark|phpunit\.dist\.xml|preload\.php)$">
+    Require all denied
+</FilesMatch>

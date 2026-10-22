@@ -2,14 +2,14 @@
 <html lang="en">
 <head>
     <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-    <title><?= esc($pageTitle) ?> · Orbit</title>
-    <link rel="icon" href="<?= base_url('favicon.svg') ?>" type="image/svg+xml">
-    <link rel="stylesheet" href="<?= base_url('assets/app.css') ?>">
-    <link rel="stylesheet" href="<?= base_url('assets/portal.css') ?>">
+    <title><?= esc($pageTitle) ?> · JIS</title>
+    <link rel="icon" href="<?= base_url('assets/jis-logo.png') ?>" type="image/png">
+    <link rel="stylesheet" href="<?= base_url('assets/app.css') ?>?v=<?= filemtime(FCPATH . 'assets/app.css') ?>">
+    <link rel="stylesheet" href="<?= base_url('assets/portal.css') ?>?v=<?= filemtime(FCPATH . 'assets/portal.css') ?>">
 </head>
 <body class="portal-body <?= esc($bodyClass ?? '') ?>">
 <header class="portal-header">
-    <a class="brand" href="<?= site_url(($staff ?? false) ? '' : 'portal') ?>"><span class="brand-mark">◒</span> orbit <span class="portal-brand-label"><?= ($staff ?? false) ? 'CLIENT MANAGEMENT' : 'CLIENT PORTAL' ?></span></a>
+    <a class="brand" href="<?= site_url(($staff ?? false) ? '' : 'portal') ?>"><img class="brand-logo" src="<?= base_url('assets/jis-logo.png') ?>" alt=""><span>JIS</span> <span class="portal-brand-label"><?= ($staff ?? false) ? 'CLIENT MANAGEMENT' : 'CLIENT PORTAL' ?></span></a>
     <nav aria-label="Portal navigation">
     <?php if ($staff ?? false): ?>
         <a href="<?= site_url() ?>">← Workspace</a><a href="<?= site_url('team') ?>">Team</a><a href="<?= site_url('clients') ?>">Clients</a><a href="<?= site_url('statuses') ?>">Manage statuses</a><a href="<?= site_url('institutes') ?>">Masters</a>

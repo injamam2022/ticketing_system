@@ -29,7 +29,7 @@ form.addEventListener('submit', async event => {
   const payload = Object.fromEntries(new FormData(form));
   try {
     await api(`issues/${config.id}`, payload); savedForm = JSON.stringify(payload);
-    document.title = `${config.code} · ${payload.title} · Orbit`;
+    document.title = `${config.code} · ${payload.title} · JIS`;
     document.querySelector('#issue-status-badge').textContent = payload.status;
     document.querySelector('#saved-at').textContent = 'Just saved';
     const notice = document.querySelector('#issue-notice'); notice.textContent = 'Changes saved.'; notice.hidden = false;

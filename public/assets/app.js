@@ -83,7 +83,7 @@ function render() {
   const titles = {all:'All issues',requests:'Client requests',mine:'My issues',active:'Active work',projects:'Projects',project:project?.name};
   const descriptions = {all:'A little structure for your next big thing.',requests:'Requests from your clients, connected to their projects.',mine:'Your focus, your flow. Everything assigned to you.',active:'Keep the momentum going. Here’s what’s moving.',projects:'Big ideas, broken down into meaningful steps.',project:project?.description || 'A shared space to move this project forward.'};
   const scope = scopedIssues(); const issues = filteredIssues(); const isProjects = state.view === 'projects';
-  document.title = `${titles[state.view]} · Orbit`; $('#breadcrumb-title').textContent = titles[state.view];
+  document.title = `${titles[state.view]} · JIS`; $('#breadcrumb-title').textContent = titles[state.view];
   $('#page-title').innerHTML = `${escapeHTML(titles[state.view])} <span>${isProjects ? state.projects.length : scope.length}</span>`;
   $('#page-description').textContent = descriptions[state.view]; $('#main-create-label').textContent = isProjects ? 'New project' : 'New issue';
   $('#view-toolbar').hidden = isProjects; $('#summary-strip').hidden = isProjects; if (isProjects) $('#filter-panel').hidden = true;

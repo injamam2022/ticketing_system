@@ -2,13 +2,13 @@
 <!doctype html>
 <html lang="en"><head>
     <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-    <title><?= esc($code . ' · ' . $issue['title']) ?> · Orbit</title>
-    <link rel="icon" href="<?= base_url('favicon.svg') ?>" type="image/svg+xml">
-    <link rel="stylesheet" href="<?= base_url('assets/app.css') ?>">
-    <link rel="stylesheet" href="<?= base_url('assets/issue.css') ?>">
+    <title><?= esc($code . ' · ' . $issue['title']) ?> · JIS</title>
+    <link rel="icon" href="<?= base_url('assets/jis-logo.png') ?>" type="image/png">
+    <link rel="stylesheet" href="<?= base_url('assets/app.css') ?>?v=<?= filemtime(FCPATH . 'assets/app.css') ?>">
+    <link rel="stylesheet" href="<?= base_url('assets/issue.css') ?>?v=<?= filemtime(FCPATH . 'assets/issue.css') ?>">
     <link rel="stylesheet" href="<?= base_url('assets/discussion.css') ?>">
 </head><body class="issue-page">
-<header class="issue-page-header"><a class="brand" href="<?= site_url() ?>"><span class="brand-mark">◒</span> orbit</a><nav aria-label="Breadcrumb"><a href="<?= site_url() ?>">Workspace</a><span>/</span><strong><?= esc($code) ?></strong></nav><a class="button subtle" id="back-to-issues" href="<?= site_url() ?>">← Back to issues</a></header>
+<header class="issue-page-header"><a class="brand" href="<?= site_url() ?>"><img class="brand-logo" src="<?= base_url('assets/jis-logo.png') ?>" alt=""> JIS</a><nav aria-label="Breadcrumb"><a href="<?= site_url() ?>">Workspace</a><span>/</span><strong><?= esc($code) ?></strong></nav><a class="button subtle" id="back-to-issues" href="<?= site_url() ?>">← Back to issues</a></header>
 <main class="issue-page-main">
     <div class="issue-page-heading"><div><span class="heading-label">ISSUE DETAILS</span><h1><?= esc($code) ?> <span id="issue-status-badge"><?= esc($issue['status']) ?></span></h1><p>Created <?= esc(date('M j, Y', strtotime($issue['created_at']))) ?> · <span id="saved-at">Last updated <?= esc(date('M j, Y', strtotime($issue['updated_at']))) ?></span></p></div><button class="button primary" form="issue-form" id="save-issue" type="submit">Save changes</button></div>
     <div id="issue-notice" class="issue-notice" hidden role="status"></div>

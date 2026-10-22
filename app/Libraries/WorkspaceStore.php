@@ -46,6 +46,7 @@ class WorkspaceStore
         $this->migrateClients();
         DiscussionSchema::migrate($this->db);
         TicketImages::schema($this->db);
+        InstituteSchema::migrate($this->db);
     }
 
     private function migrateClients(): void
@@ -119,13 +120,13 @@ class WorkspaceStore
 
     public function clientProjects(int $client): array
     {
-        return $this->run('SELECT projects.id,projects.name,projects.color FROM projects JOIN client_projects cp ON cp.project_id=projects.id JOIN clients ON clients.id=cp.client_id WHERE cp.client_id=? AND clients.active=1 ORDER BY projects.name', [$client])->fetchAll();
+        return $this->run('SELECT projects.id,projects.name,projects.color,projects.institute_id,institutes.name AS institute_name FROM projects JOIN client_projects cp ON cp.project_id=projects.id JOIN clients ON clients.id=cp.client_id LEFT JOIN institutes ON institutes.id=projects.institute_id WHERE cp.client_id=? AND clients.active=1 ORDER BY institutes.name, projects.name', [$client])->fetchAll();
     }
 
     public function clientTickets(int $client): array
     {
         // Client responses deliberately exclude staff identities and internal comments.
-        return $this->run('SELECT i.id,i.title,i.description,i.status,i.priority,i.created_at,i.updated_at,p.name AS project_name FROM issues i JOIN projects p ON p.id=i.project_id JOIN client_projects cp ON cp.project_id=i.project_id AND cp.client_id=i.client_id JOIN clients c ON c.id=i.client_id WHERE i.client_id=? AND c.active=1 ORDER BY i.id DESC', [$client])->fetchAll();
+        return $this->run('SELECT i.id,i.title,i.description,i.status,i.priority,i.created_at,i.updated_at,p.name AS project_name,institutes.name AS institute_name FROM issues i JOIN projects p ON p.id=i.project_id JOIN client_projects cp ON cp.project_id=i.project_id AND cp.client_id=i.client_id JOIN clients c ON c.id=i.client_id LEFT JOIN institutes ON institutes.id=i.institute_id WHERE i.client_id=? AND c.active=1 ORDER BY i.id DESC', [$client])->fetchAll();
     }
 
     public function clientTicket(int $client, int $issue): array
@@ -137,7 +138,21 @@ class WorkspaceStore
     public function submitClientTicket(int $client, array $input, array $images = []): int
     {
         $project = $input['project_id'] ?? null;
-        if (!filter_var($project, FILTER_VALIDATE_INT) || !in_array((int) $project, array_column($this->clientProjects($client), 'id'), true)) { throw new InvalidArgumentException('Choose one of your assigned projects.'); }
+        $match = null;
+        foreach ($this->clientProjects($client) as $row) {
+            if (filter_var($project, FILTER_VALIDATE_INT) && (int) $row['id'] === (int) $project) { $match = $row; }
+        }
+        if (!$match) { throw new InvalidArgumentException('Choose one of your assigned projects.'); }
+        $postedInstitute = $input['institute_id'] ?? null;
+        $postedInstitute = ($postedInstitute === '' || $postedInstitute === null) ? null : $postedInstitute;
+        if ($postedInstitute !== null && !filter_var($postedInstitute, FILTER_VALIDATE_INT)) { throw new InvalidArgumentException('Choose a valid institute.'); }
+        $postedInstitute = $postedInstitute === null ? null : (int) $postedInstitute;
+        $owner = isset($match['institute_id']) && $match['institute_id'] !== null && $match['institute_id'] !== '' ? (int) $match['institute_id'] : null;
+        if ($owner !== null && $postedInstitute !== $owner) { throw new InvalidArgumentException('Choose the institute for this master\'s project work.'); }
+        if ($owner === null && $postedInstitute !== null) {
+            if (!$this->institute($postedInstitute)) { throw new InvalidArgumentException('Choose a valid institute.'); }
+            $owner = $postedInstitute;
+        }
         $description = $input['description'] ?? '';
         if (!is_string($description) || trim($description) === '') { throw new InvalidArgumentException('Describe your request so our team can help.'); }
         $type = $input['type'] ?? 'Support';
@@ -153,7 +168,7 @@ class WorkspaceStore
         try {
             // Only these client-editable fields enter the staff issue system.
             $id = $this->saveIssue(['title' => $input['title'] ?? '', 'description' => $description, 'project_id' => (int) $project, 'priority' => $input['priority'] ?? 'Medium', 'status' => $this->defaultStatus(), 'label' => $type]);
-            $this->run('UPDATE issues SET client_id=? WHERE id=?', [$client, $id]);
+            $this->run('UPDATE issues SET client_id=?, institute_id=? WHERE id=?', [$client, $owner, $id]);
             foreach ($images as $image) { $this->run('INSERT INTO ticket_images (issue_id,storage_key,filename,mime,size) VALUES (?,?,?,?,?)', [$id, $image['storage_key'], $image['filename'], $image['mime'], $image['size']]); }
             $this->db->commit();
             return $id;
@@ -268,7 +283,8 @@ class WorkspaceStore
         return [
             'statuses' => $this->statuses(),
             'users' => $this->db->query('SELECT id, name, email, color FROM users')->fetchAll(),
-            'projects' => $this->db->query('SELECT * FROM projects ORDER BY id')->fetchAll(),
+            'projects' => $this->db->query('SELECT projects.*, institutes.name AS institute_name FROM projects LEFT JOIN institutes ON institutes.id = projects.institute_id ORDER BY projects.id')->fetchAll(),
+            'institutes' => $this->institutes(),
             'issues' => $this->db->query('SELECT issues.*, clients.name AS client_name, clients.company AS client_company, (SELECT COUNT(*) FROM comments WHERE issue_id = issues.id) AS comment_count FROM issues LEFT JOIN clients ON clients.id=issues.client_id ORDER BY issues.id DESC')->fetchAll(),
         ];
     }
@@ -333,8 +349,46 @@ class WorkspaceStore
         $description = $input['description'] ?? '';
         $color = $input['color'] ?? '#9b8afb';
         if (!is_string($name) || trim($name) === '' || mb_strlen($name) > 80 || !is_string($description) || mb_strlen($description) > 1000 || !is_string($color) || !preg_match('/^#[a-fA-F0-9]{6}$/', $color)) { throw new InvalidArgumentException('Enter a project name (up to 80 characters), description (up to 1,000), and valid color.'); }
-        $this->run('INSERT INTO projects (name,description,color) VALUES (?,?,?)', [trim($name), trim($description), $color]);
+        $institute = $input['institute_id'] ?? null;
+        $institute = ($institute === '' || $institute === null) ? null : $institute;
+        if ($institute !== null && (!filter_var($institute, FILTER_VALIDATE_INT) || !$this->institute((int) $institute))) { throw new InvalidArgumentException('Choose a valid institute.'); }
+        $this->run('INSERT INTO projects (name,description,color,institute_id) VALUES (?,?,?,?)', [trim($name), trim($description), $color, $institute === null ? null : (int) $institute]);
         return (int) $this->db->lastInsertId();
+    }
+
+    public function institute(int $id): array|false
+    {
+        return $this->run('SELECT id, name FROM institutes WHERE id=?', [$id])->fetch();
+    }
+
+    public function institutes(): array
+    {
+        return $this->db->query('SELECT id, name FROM institutes ORDER BY name')->fetchAll();
+    }
+
+    public function saveInstitute(array $input, ?int $id = null): int
+    {
+        if ($id && !$this->institute($id)) { throw new InvalidArgumentException('Institute not found.'); }
+        $name = $input['name'] ?? '';
+        if (!is_string($name) || trim($name) === '' || mb_strlen(trim($name)) > 120) { throw new InvalidArgumentException('Enter an institute name up to 120 characters.'); }
+        $name = trim($name);
+        $existing = $this->run('SELECT id FROM institutes WHERE LOWER(name)=LOWER(?)', [$name])->fetch();
+        if ($existing && (int) $existing['id'] !== (int) $id) { throw new InvalidArgumentException('An institute with that name already exists.'); }
+        if ($id) {
+            $this->run('UPDATE institutes SET name=? WHERE id=?', [$name, $id]);
+            return $id;
+        }
+        $this->run('INSERT INTO institutes (name, created_at) VALUES (?,?)', [$name, gmdate('c')]);
+        return (int) $this->db->lastInsertId();
+    }
+
+    public function assignProjectInstitute(mixed $project, int $institute): void
+    {
+        if (!filter_var($project, FILTER_VALIDATE_INT) || !$this->institute($institute)) { throw new InvalidArgumentException('Choose a valid institute and project.'); }
+        $row = $this->run('SELECT id, institute_id FROM projects WHERE id=?', [(int) $project])->fetch();
+        if (!$row) { throw new InvalidArgumentException('Choose a valid institute and project.'); }
+        if ($row['institute_id'] !== null && $row['institute_id'] !== '' && (int) $row['institute_id'] !== $institute) { throw new InvalidArgumentException('This project work already belongs to another institute.'); }
+        $this->run('UPDATE projects SET institute_id=? WHERE id=?', [$institute, (int) $project]);
     }
 
     private function seed(): void

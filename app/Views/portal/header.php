@@ -12,7 +12,7 @@
     <a class="brand" href="<?= site_url(($staff ?? false) ? '' : 'portal') ?>"><span class="brand-mark">◒</span> orbit <span class="portal-brand-label"><?= ($staff ?? false) ? 'CLIENT MANAGEMENT' : 'CLIENT PORTAL' ?></span></a>
     <nav aria-label="Portal navigation">
     <?php if ($staff ?? false): ?>
-        <a href="<?= site_url() ?>">← Workspace</a><a href="<?= site_url('team') ?>">Team</a><a href="<?= site_url('clients') ?>">Clients</a><a href="<?= site_url('statuses') ?>">Manage statuses</a>
+        <a href="<?= site_url() ?>">← Workspace</a><a href="<?= site_url('team') ?>">Team</a><a href="<?= site_url('clients') ?>">Clients</a><a href="<?= site_url('statuses') ?>">Manage statuses</a><a href="<?= site_url('institutes') ?>">Masters</a>
     <?php elseif (isset($client)): ?>
         <a href="<?= site_url('portal') ?>">My tickets</a><span class="portal-identity"><?= esc($client['name']) ?></span>
         <form method="post" action="<?= site_url('portal/logout') ?>"><input type="hidden" name="csrf" value="<?= esc($csrf) ?>"><button class="button subtle">Sign out</button></form>

@@ -61,5 +61,6 @@ final class MySqlDatabase
         DiscussionSchema::migrate($db);
         StatusSchema::create($db);
         TicketImages::schema($db);
+        InstituteSchema::migrate($db);
     }
 }

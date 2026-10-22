@@ -83,6 +83,39 @@ final class ClientPortalTest extends CIUnitTestCase
         $this->submit();
     }
 
+    public function testSubmissionRecordsTheInstituteForMastersProjectWork(): void
+    {
+        $north = $this->store->saveInstitute(['name' => 'Northbridge Institute']);
+        $south = $this->store->saveInstitute(['name' => 'Southbridge Institute']);
+        $work = $this->store->saveProject(['name' => 'Thesis portal', 'description' => 'Masters project', 'color' => '#9b8afb', 'institute_id' => $north]);
+        $other = $this->store->saveProject(['name' => 'Field study', 'description' => 'Another masters project', 'color' => '#75b8e9', 'institute_id' => $south]);
+        $this->store->saveClient(array_replace($this->account(), ['projects' => [1, $work, $other], 'password' => '']), $this->client);
+        $id = $this->store->submitClientTicket($this->client, ['title' => 'Help with the thesis', 'description' => 'Details', 'project_id' => $work, 'institute_id' => $north]);
+        $ticket = $this->store->clientTicket($this->client, $id);
+        $this->assertSame('Northbridge Institute', $ticket['institute_name']);
+        $this->assertSame('Thesis portal', $ticket['project_name']);
+        $this->assertSame($north, (int) $this->store->issue($id)['institute_id']);
+    }
+
+    public function testUnlinkedProjectRecordsTheInstituteTheClientChooses(): void
+    {
+        $north = $this->store->saveInstitute(['name' => 'Northbridge Institute']);
+        $id = $this->store->submitClientTicket($this->client, ['title' => 'Help with my project', 'description' => 'Details', 'project_id' => 1, 'institute_id' => $north]);
+        $this->assertSame('Northbridge Institute', $this->store->clientTicket($this->client, $id)['institute_name']);
+        $this->assertSame($north, (int) $this->store->issue($id)['institute_id']);
+    }
+
+    public function testChangingToAnotherInstituteRejectsThatProjectWork(): void
+    {
+        $north = $this->store->saveInstitute(['name' => 'Northbridge Institute']);
+        $south = $this->store->saveInstitute(['name' => 'Southbridge Institute']);
+        $work = $this->store->saveProject(['name' => 'Thesis portal', 'description' => 'Masters project', 'color' => '#9b8afb', 'institute_id' => $north]);
+        $this->store->saveClient(array_replace($this->account(), ['projects' => [$work], 'password' => '']), $this->client);
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Choose the institute for this master\'s project work.');
+        $this->store->submitClientTicket($this->client, ['title' => 'Wrong institute', 'description' => 'Details', 'project_id' => $work, 'institute_id' => $south]);
+    }
+
     public function testClientsHaveHashedPasswordsAndUniqueEmails(): void
     {
         $account = $this->store->clientByEmail('TAYLOR@EXAMPLE.COM');

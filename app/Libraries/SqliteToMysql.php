@@ -7,7 +7,7 @@ use RuntimeException;
 
 final class SqliteToMysql
 {
-    public const TABLES = ['users', 'projects', 'clients', 'issues', 'comments', 'client_projects', 'client_messages', 'login_attempts', 'comment_reactions', 'comment_subscriptions', 'comment_attachments', 'comment_notifications', 'comment_issue_links', 'issue_events', 'workspace_statuses', 'ticket_images'];
+    public const TABLES = ['users', 'institutes', 'projects', 'clients', 'issues', 'comments', 'client_projects', 'client_messages', 'login_attempts', 'comment_reactions', 'comment_subscriptions', 'comment_attachments', 'comment_notifications', 'comment_issue_links', 'issue_events', 'workspace_statuses', 'ticket_images'];
 
     /** Import into an empty schema, retain identifiers, and verify every field before commit. */
     public static function import(PDO $source, PDO $target): array
@@ -46,7 +46,7 @@ final class SqliteToMysql
 
         // Keep SQLite's sequence high-water marks, including IDs of deleted issues.
         foreach ($source->query('SELECT name,seq FROM sqlite_sequence')->fetchAll(PDO::FETCH_ASSOC) as $sequence) {
-            if (in_array($sequence['name'], ['projects', 'clients', 'issues', 'comments', 'client_messages', 'comment_attachments', 'comment_notifications', 'issue_events', 'ticket_images'], true)) {
+            if (in_array($sequence['name'], ['institutes', 'projects', 'clients', 'issues', 'comments', 'client_messages', 'comment_attachments', 'comment_notifications', 'issue_events', 'ticket_images'], true)) {
                 $target->exec('ALTER TABLE `' . $sequence['name'] . '` AUTO_INCREMENT = ' . ((int) $sequence['seq'] + 1));
             }
         }

@@ -117,7 +117,7 @@
 .ticket-description .preserve-text { margin:20px 0 0; }
 .ticket-info h2 { margin:15px 0 10px; }
 .ticket-info>p { font-size:12px; }
-.ticket-info dl { display:grid; grid-template-columns:95px minmax(0,1fr); gap:20px 10px; font-size:12px; margin:28px 0 5px; }
+.ticket-info dl { display:grid; grid-template-columns:110px minmax(0,1fr); gap:20px 10px; font-size:12px; margin:28px 0 5px; }
 .ticket-info dt { color:#b29fc1; }
 .ticket-info dd { color:#847091; margin:0; overflow-wrap:anywhere; }
 .ticket-info hr { border:0; border-top:1px solid #ece4f2; margin-top:25px; }
@@ -150,6 +150,12 @@
 .client-project-tags { margin:15px 0 0 47px; display:flex; flex-wrap:wrap; gap:5px; }
 .client-project-tags span { font-size:10px; color:#aa94b9; background:#f5f0fa; border-radius:4px; padding:4px 7px; }
 .client-card .client-form { border-top:1px solid #e9e1f0; margin-top:20px; }
+.master-section { margin-top:8px; }
+.master-section h3 { margin:18px 0 8px; font-size:14px; font-weight:550; }
+.master-works { list-style:none; margin:0 0 8px; padding:0; }
+.master-works:empty { display:none; }
+.master-works li { display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid #f0ecf4; font-size:13px; }
+.master-works i { width:8px; height:8px; border-radius:2px; flex-shrink:0; }
 .portal-form fieldset { border:1px solid #e7deef; padding:12px 15px; border-radius:8px; margin:20px 0; }
 .portal-form legend { padding:0 5px; color:#9a80ab; font-size:12px; }
 .portal-form fieldset p { font-size:10px; color:#ac97ba; line-height:1.7; margin:3px 0 12px; }

@@ -34,6 +34,11 @@ $routes->post('api/comment-notifications/(:num)/read', 'Discussion::readNotifica
 $routes->get('api/comment-attachments/(:num)', 'Discussion::attachment/$1');
 $routes->post('api/comment-attachments/(:num)/remove', 'Discussion::removeAttachment/$1');
 
+$routes->get('institutes', 'Institutes::index');
+$routes->post('institutes', 'Institutes::save');
+$routes->post('institutes/(:num)', 'Institutes::save/$1');
+$routes->post('institutes/(:num)/work', 'Institutes::saveWork/$1');
+$routes->post('institutes/(:num)/link', 'Institutes::linkWork/$1');
 $routes->get('team', 'Team::index');
 $routes->post('team', 'Team::save');
 $routes->post('team/(:num)', 'Team::save/$1');

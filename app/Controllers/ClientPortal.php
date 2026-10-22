@@ -40,7 +40,7 @@ class ClientPortal extends BaseController
         try { return $action($store, $client); }
         catch (DomainException $error) { throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound($error->getMessage()); }
         catch (InvalidArgumentException $error) {
-            $old = array_intersect_key($this->request->getPost() ?? [], array_flip(['name', 'company', 'email', 'active', 'projects', 'project_id', 'title', 'description', 'priority', 'type', 'body']));
+            $old = array_intersect_key($this->request->getPost() ?? [], array_flip(['name', 'company', 'email', 'active', 'projects', 'project_id', 'institute_id', 'title', 'description', 'priority', 'type', 'body']));
             foreach ($old as $key => $value) {
                 if ($key === 'projects') { $old[$key] = is_array($value) ? array_values(array_filter($value, 'is_string')) : []; }
                 elseif (!is_string($value)) { unset($old[$key]); }
@@ -83,7 +83,7 @@ class ClientPortal extends BaseController
 
     public function index()
     {
-        return $this->guarded(false, 'portal', fn ($store, $client) => $this->render('index', ['bodyClass' => 'portal-dashboard', 'client' => $client, 'projects' => $store->clientProjects($client['id']), 'tickets' => $store->clientTickets($client['id'])]));
+        return $this->guarded(false, 'portal', fn ($store, $client) => $this->render('index', ['bodyClass' => 'portal-dashboard', 'client' => $client, 'projects' => $store->clientProjects($client['id']), 'institutes' => $store->institutes(), 'tickets' => $store->clientTickets($client['id'])]));
     }
 
     public function submit()
@@ -137,6 +137,7 @@ class ClientPortal extends BaseController
             if (!$ticket || !$ticket['client_id']) { throw new DomainException('Client ticket not found.'); }
             $project = array_values(array_filter($store->data()['projects'], fn ($project) => $project['id'] === $ticket['project_id']));
             $ticket['project_name'] = $project[0]['name'] ?? 'No project';
+            $ticket['institute_name'] = !empty($ticket['institute_id']) ? ($store->institute((int) $ticket['institute_id'])['name'] ?? null) : null;
             return $this->render('ticket', ['staff' => true, 'client' => $store->client($ticket['client_id']), 'ticket' => $ticket, 'images' => $store->ticketImages($id), 'messages' => $store->clientMessages($id)]);
         });
     }

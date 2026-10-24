@@ -178,7 +178,7 @@ trait DiscussionFeatures
         $source = $this->issue($issue);
         $this->db->beginTransaction();
         try {
-            $new = $this->saveIssue(['title' => $title, 'description' => $comment['body'] . "\n\nSource: ORB-" . $issue . ' / comment #' . $id, 'project_id' => $source['project_id'], 'priority' => $source['priority']]);
+            $new = $this->saveIssue(['title' => $title, 'description' => $comment['body'] . "\n\nSource: ORB-" . $issue . ' / comment #' . $id, 'project_id' => $source['project_id'], 'institute_id' => $source['institute_id'] ?? null, 'priority' => $source['priority']]);
             $this->run('INSERT INTO comment_issue_links VALUES (?,?,?)', [$id,$new,$kind === 'subissue' ? $issue : null]);
             $this->db->commit();
             return $new;
@@ -193,7 +193,7 @@ trait DiscussionFeatures
     public function logIssueChanges(int $issue, array $before, int $user): void
     {
         $after = $this->issue($issue);
-        foreach (['title'=>'title','status'=>'status','priority'=>'priority','assignee_id'=>'assignee','project_id'=>'project','label'=>'label','due_date'=>'due date','description'=>'description'] as $field => $label) {
+        foreach (['title'=>'title','status'=>'status','priority'=>'priority','assignee_id'=>'assignee','project_id'=>'project','institute_id'=>'institute','label'=>'label','due_date'=>'due date','description'=>'description'] as $field => $label) {
             if (($before[$field] ?? null) == ($after[$field] ?? null)) { continue; }
             $body = 'Changed ' . $label;
             if (in_array($field, ['status','priority','label','due_date'], true)) { $body .= ' from ' . ($before[$field] ?: 'none') . ' to ' . ($after[$field] ?: 'none'); }

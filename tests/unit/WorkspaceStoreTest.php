@@ -37,6 +37,21 @@ final class WorkspaceStoreTest extends CIUnitTestCase
         catch (InvalidArgumentException) { $this->assertSame('Todo', $this->store->issue($id)['status']); }
     }
 
+    public function testStaffIssueStoresTheChosenInstitute(): void
+    {
+        $institute = $this->store->saveInstitute(['name' => 'Northbridge Institute']);
+        $project = $this->store->saveProject(['name' => 'Platform', 'description' => 'Shared work', 'color' => '#75b8e9']);
+        $id = $this->store->saveIssue(['title' => 'Staff ticket', 'project_id' => $project, 'institute_id' => $institute, 'due_date' => '2026-11-20']);
+        $issue = $this->store->issue($id);
+        $this->assertSame($institute, (int) $issue['institute_id']);
+        $this->assertSame($project, (int) $issue['project_id']);
+        $this->assertSame('2026-11-20', $issue['due_date']);
+        $this->store->saveIssue(['status' => 'In progress'], $id);
+        $this->assertSame($institute, (int) $this->store->issue($id)['institute_id']);
+        $this->expectException(InvalidArgumentException::class);
+        $this->store->saveIssue(['title' => 'Bad institute', 'institute_id' => 99999]);
+    }
+
     public function testInvalidDateIsRejected(): void
     {
         $this->expectException(InvalidArgumentException::class);

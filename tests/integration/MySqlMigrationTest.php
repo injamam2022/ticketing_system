@@ -18,7 +18,7 @@ final class MySqlMigrationTest extends CIUnitTestCase
             $sqlite = new WorkspaceStore($path);
             $statusId = $sqlite->saveStatus(['name' => 'Client Approval', 'color' => '#00aabb', 'category' => 'review']);
             $client = $sqlite->saveClient(['name' => 'Client Test', 'company' => 'Example', 'email' => 'migration@example.com', 'password' => 'Password-for-test-123', 'projects' => [1], 'active' => '1']);
-            $id = $sqlite->submitClientTicket($client, ['title' => 'Unicode request: café 🚀', 'description' => "Client's request\nSecond line", 'project_id' => 1], [['storage_key' => str_repeat('c', 32), 'filename' => 'Client screenshot.png', 'mime' => 'image/png', 'size' => 100]]);
+            $id = $sqlite->submitClientTicket($client, ['title' => 'Unicode request: café 🚀', 'description' => "Client's request\nSecond line", 'project_id' => 1, 'due_date' => '2026-11-15'], [['storage_key' => str_repeat('c', 32), 'filename' => 'Client screenshot.png', 'mime' => 'image/png', 'size' => 100]]);
             $sqlite->addComment($id, 1, 'Private note');
             $sqlite->addClientMessage($id, 'Public message', $client);
             $deleted = $sqlite->saveIssue(['title' => 'Deleted before migration']);

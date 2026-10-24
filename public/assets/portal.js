@@ -12,25 +12,6 @@ function filterTickets() {
 search?.addEventListener('input', filterTickets);
 statusFilter?.addEventListener('change', filterTickets);
 
-const instituteSelect = document.querySelector('#ticket-institute');
-const projectSelect = document.querySelector('#ticket-project');
-if (instituteSelect && projectSelect) {
-  const applyInstitute = () => {
-    const institute = instituteSelect.value;
-    let selectedStillVisible = projectSelect.value === '';
-    [...projectSelect.options].forEach(option => {
-      if (!option.value) return;
-      const visible = institute ? option.dataset.institute === institute : option.dataset.institute === '';
-      option.hidden = !visible;
-      option.disabled = !visible;
-      if (option.value === projectSelect.value && visible) selectedStillVisible = true;
-    });
-    if (!selectedStillVisible) projectSelect.value = '';
-  };
-  instituteSelect.addEventListener('change', applyInstitute);
-  applyInstitute();
-}
-
 const imageInput = document.querySelector('#ticket-images');
 if (imageInput) {
   const dropzone = document.querySelector('#ticket-dropzone');

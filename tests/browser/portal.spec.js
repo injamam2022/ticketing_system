@@ -45,6 +45,7 @@ test('client submission, staff management, and shared replies work end to end', 
   await portal.screenshot({ path: 'build/screenshots/client-portal.png', fullPage: true });
   const title = `Client request ${Date.now()}`;
   await portal.locator('[name=project_id]').selectOption('1');
+  await portal.locator('[name=due_date]').fill('2026-11-15');
   await portal.locator('[name=title]').fill(title);
   await portal.locator('[name=description]').fill('Please help with the customer dashboard. <b>Plain text</b>');
   await portal.getByRole('button', { name: 'Submit ticket' }).click();

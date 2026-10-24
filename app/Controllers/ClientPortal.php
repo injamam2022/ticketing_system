@@ -40,7 +40,7 @@ class ClientPortal extends BaseController
         try { return $action($store, $client); }
         catch (DomainException $error) { throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound($error->getMessage()); }
         catch (InvalidArgumentException $error) {
-            $old = array_intersect_key($this->request->getPost() ?? [], array_flip(['name', 'company', 'email', 'active', 'projects', 'project_id', 'institute_id', 'title', 'description', 'priority', 'type', 'body']));
+            $old = array_intersect_key($this->request->getPost() ?? [], array_flip(['name', 'company', 'email', 'active', 'projects', 'project_id', 'institute_id', 'title', 'description', 'priority', 'due_date', 'body']));
             foreach ($old as $key => $value) {
                 if ($key === 'projects') { $old[$key] = is_array($value) ? array_values(array_filter($value, 'is_string')) : []; }
                 elseif (!is_string($value)) { unset($old[$key]); }

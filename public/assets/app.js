@@ -24,7 +24,8 @@ const statusCategory = name => statusDefinitions.find(status => status.name === 
 const isClosed = name => ['done','canceled'].includes(statusCategory(name));
 const priorities = ['No priority','Urgent','High','Medium','Low'];
 const labelColors = {'Feature':'#ab92d5','Bug':'#d4838d','Design':'#78a7ce','Improvement':'#d0ac71'};
-const state = {issues:[],projects:[],users:[],currentUser:1,view:'all',project:null,layout:localStorage.getItem('orbit-layout') === 'board' ? 'board' : 'list',search:'',category:'',status:'',priority:'',assignee:'',sort:'newest',editing:null,collapsed:new Set(),ready:false};
+const state = {issues:[],projects:[],users:[],institutes:[],currentUser:1,view:'all',project:null,layout:localStorage.getItem('orbit-layout') === 'board' ? 'board' : 'list',search:'',category:'',status:'',priority:'',assignee:'',institute:'',projectFilter:'',sort:'newest',editing:null,collapsed:new Set(),ready:false};
+const activeFilters = () => [state.status,state.category,state.priority,state.assignee,state.institute,state.projectFilter].filter(Boolean);
 const initials = name => name.split(' ').map(word => word[0]).slice(0,2).join('');
 const avatar = user => user ? `<span class="avatar" style="--avatar:${escapeHTML(user.color)}" title="${escapeHTML(user.name)}">${escapeHTML(initials(user.name))}</span>` : `<span class="avatar unassigned" title="Unassigned">${icon('user')}</span>`;
 const statusIcon = status => `<span class="status-icon ${escapeHTML(statusCategory(status) === 'done' ? 'done' : statusCategory(status) === 'active' ? 'in-progress' : statusCategory(status) === 'review' ? 'in-review' : statusCategory(status) === 'backlog' ? 'backlog' : 'todo')}" style="--status:${escapeHTML(statusColors[status] || '#777283')}" title="${escapeHTML(status)}"></span>`;
@@ -32,6 +33,8 @@ const priorityIcon = priority => `<span class="priority-icon ${priority.toLowerC
 const label = value => value ? `<span class="issue-label" style="--label-color:${labelColors[value] || '#8f819e'}">${escapeHTML(value)}</span>` : '';
 const userFor = id => state.users.find(user => Number(user.id) === Number(id));
 const projectFor = id => state.projects.find(project => Number(project.id) === Number(id));
+const instituteFor = id => (state.institutes || []).find(institute => Number(institute.id) === Number(id));
+const projectOptionLabel = project => project.institute_name ? `${project.name} · ${project.institute_name}` : project.name;
 const code = id => `ORB-${String(id).padStart(3,'0')}`;
 let toastTimer;
 function toast(message) { const el = $('#toast'); el.textContent = message; el.classList.add('visible'); clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('visible'), 3800); }
@@ -58,19 +61,23 @@ function renderNavigation() {
   const current = userFor(state.currentUser); $('#current-avatar').innerHTML = avatar(current); $('#current-name').textContent = current?.name || 'Your workspace';
   const selected = state.assignee;
   $('#assignee-filter').innerHTML = '<option value="">Everyone</option><option value="unassigned">Unassigned</option>' + state.users.map(user => `<option value="${user.id}">${escapeHTML(user.name)}</option>`).join(''); $('#assignee-filter').value = selected;
+  const selectedInstitute = state.institute;
+  $('#institute-filter').innerHTML = '<option value="">All institutes</option><option value="none">No institute</option>' + (state.institutes || []).map(institute => `<option value="${institute.id}">${escapeHTML(institute.name)}</option>`).join(''); $('#institute-filter').value = selectedInstitute;
+  const selectedProject = state.projectFilter;
+  $('#project-filter').innerHTML = '<option value="">All projects</option><option value="none">No project</option>' + state.projects.map(project => `<option value="${project.id}">${escapeHTML(projectOptionLabel(project))}</option>`).join(''); $('#project-filter').value = selectedProject;
 }
 function scopedIssues() {
   return state.issues.filter(issue => state.view === 'mine' ? Number(issue.assignee_id) === Number(state.currentUser) : state.view === 'requests' ? !!issue.client_id : state.view === 'active' ? ['active','review'].includes(statusCategory(issue.status)) : state.view === 'project' ? Number(issue.project_id) === Number(state.project) : true);
 }
 function filteredIssues() {
   return scopedIssues().filter(issue => {
-    const text = [issue.title,issue.description,code(issue.id),issue.label,issue.client_name,issue.client_company,projectFor(issue.project_id)?.name,userFor(issue.assignee_id)?.name].join(' ').toLowerCase();
-    return (!state.category || statusCategory(issue.status) === state.category) && (!state.search || text.includes(state.search.toLowerCase())) && (!state.status || issue.status === state.status) && (!state.priority || issue.priority === state.priority) && (!state.assignee || (state.assignee === 'unassigned' ? !issue.assignee_id : Number(issue.assignee_id) === Number(state.assignee)));
+    const text = [issue.title,issue.description,code(issue.id),issue.label,issue.client_name,issue.client_company,projectFor(issue.project_id)?.name,instituteFor(issue.institute_id)?.name,userFor(issue.assignee_id)?.name].join(' ').toLowerCase();
+    return (!state.category || statusCategory(issue.status) === state.category) && (!state.search || text.includes(state.search.toLowerCase())) && (!state.status || issue.status === state.status) && (!state.priority || issue.priority === state.priority) && (!state.assignee || (state.assignee === 'unassigned' ? !issue.assignee_id : Number(issue.assignee_id) === Number(state.assignee))) && (!state.institute || (state.institute === 'none' ? !issue.institute_id : Number(issue.institute_id) === Number(state.institute))) && (!state.projectFilter || (state.projectFilter === 'none' ? !issue.project_id : Number(issue.project_id) === Number(state.projectFilter)));
   }).sort((a,b) => state.sort === 'priority' ? ((priorities.indexOf(a.priority) || 5) - (priorities.indexOf(b.priority) || 5) || b.id-a.id) : state.sort === 'title' ? a.title.localeCompare(b.title) : state.sort === 'due' ? (a.due_date || '9999').localeCompare(b.due_date || '9999') : b.id-a.id);
 }
 function navigate(view, project = null) {
-  state.view = view; state.project = project; state.search = ''; state.status = ''; state.category = ''; state.priority = ''; state.assignee = ''; state.collapsed.clear();
-  $('#issue-search').value = ''; $('#status-filter').value = ''; $('#priority-filter').value = ''; $('#assignee-filter').value = ''; $('#filter-panel').hidden = true;
+  state.view = view; state.project = project; state.search = ''; state.status = ''; state.category = ''; state.priority = ''; state.assignee = ''; state.institute = ''; state.projectFilter = ''; state.collapsed.clear();
+  $('#issue-search').value = ''; $('#status-filter').value = ''; $('#priority-filter').value = ''; $('#assignee-filter').value = ''; $('#institute-filter').value = ''; $('#project-filter').value = ''; $('#filter-panel').hidden = true;
   $('#sidebar').classList.remove('open'); renderNavigation(); render();
 }
 function renderSummary(issues) {
@@ -93,7 +100,7 @@ function render() {
     const names = {backlog:'Backlog',todo:'To do',active:'In progress',review:'In review',done:'Completed',canceled:'Canceled'};
     $('#status-filter').insertAdjacentHTML('beforeend', `<option data-category-filter disabled selected>Category: ${names[state.category] || ''}</option>`);
   } else { $('#status-filter').value = state.status; }
-  const count = [state.status,state.category,state.priority,state.assignee].filter(Boolean).length; $('#filter-count').textContent = count || ''; $('#filter-toggle').classList.toggle('active',count > 0);
+  const count = activeFilters().length; $('#filter-count').textContent = count || ''; $('#filter-toggle').classList.toggle('active',count > 0);
   $('#result-count').textContent = isProjects ? `${state.projects.length} projects in your workspace` : `Showing ${issues.length} of ${scope.length} issues`;
   if (isProjects) { renderProjects(); return; }
   if (!issues.length) {
@@ -108,7 +115,8 @@ function renderList(issues) {
     const group = issues.filter(issue => issue.status === status);
     return `<section class="issue-group">${groupHeading(status,group.length)}${state.collapsed.has(status) ? '' : group.map(issue => {
       const project = projectFor(issue.project_id);
-      return `<button class="issue-row" data-issue="${issue.id}" aria-label="${escapeHTML(code(issue.id) + ': ' + issue.title)}">${priorityIcon(issue.priority)}<span class="issue-id">${code(issue.id)}</span>${statusIcon(issue.status)}<span class="issue-name">${escapeHTML(issue.title)}</span>${issue.client_id ? '<span class="client-origin" title="Submitted by a client">Client</span>' : ''}${label(issue.label)}<span class="row-project">${project ? `<span class="project-dot" style="background:${escapeHTML(project.color)}"></span>${escapeHTML(project.name)}` : ''}</span>${issue.due_date ? `<span class="row-date">${new Date(issue.due_date + 'T12:00:00').toLocaleDateString(undefined,{month:'short',day:'numeric'})}</span>` : ''}${avatar(userFor(issue.assignee_id))}</button>`;
+      const institute = instituteFor(issue.institute_id);
+      return `<button class="issue-row" data-issue="${issue.id}" aria-label="${escapeHTML(code(issue.id) + ': ' + issue.title)}">${priorityIcon(issue.priority)}<span class="issue-id">${code(issue.id)}</span>${statusIcon(issue.status)}<span class="issue-name">${escapeHTML(issue.title)}</span>${issue.client_id ? '<span class="client-origin" title="Submitted by a client">Client</span>' : ''}${label(issue.label)}<span class="row-project">${project ? `<span class="project-dot" style="background:${escapeHTML(project.color)}"></span>${escapeHTML(project.name)}` : ''}${institute ? `<span class="row-date">${escapeHTML(institute.name)}</span>` : ''}</span>${issue.due_date ? `<span class="row-date">${new Date(issue.due_date + 'T12:00:00').toLocaleDateString(undefined,{month:'short',day:'numeric'})}</span>` : ''}${avatar(userFor(issue.assignee_id))}</button>`;
     }).join('')}</section>`;
   }).join('');
 }
@@ -123,7 +131,7 @@ function openIssue(id = null, status = null) {
   if (!state.ready) return;
   status ??= statusDefinitions.find(item => item.system_key === 'Todo')?.name || statuses[0];
   if (id) {
-    sessionStorage.setItem('orbit-return-view', JSON.stringify(Object.fromEntries(['view','project','layout','search','status','category','priority','assignee','sort'].map(key => [key,state[key]]))));
+    sessionStorage.setItem('orbit-return-view', JSON.stringify(Object.fromEntries(['view','project','layout','search','status','category','priority','assignee','institute','projectFilter','sort'].map(key => [key,state[key]]))));
     location.href = `${window.ORBIT.issues}/${Number(id)}`;
     return;
   }
@@ -143,7 +151,9 @@ function openIssue(id = null, status = null) {
   $('#edit-status').innerHTML = options(statuses, issue?.status || status); $('#edit-priority').innerHTML = options(priorities, issue?.priority || 'No priority');
   $('#edit-assignee').innerHTML = '<option value="">Unassigned</option>' + state.users.map(user => `<option value="${user.id}">${escapeHTML(user.name)}</option>`).join('');
   $('#edit-assignee').value = issue?.assignee_id || (state.view === 'mine' ? state.currentUser : '');
-  $('#edit-project').innerHTML = '<option value="">No project</option>' + state.projects.map(project => `<option value="${project.id}">${escapeHTML(project.name)}</option>`).join('');
+  $('#edit-institute').innerHTML = '<option value="">Choose institute</option>' + (state.institutes || []).map(institute => `<option value="${institute.id}">${escapeHTML(institute.name)}</option>`).join('');
+  $('#edit-institute').value = issue?.institute_id || '';
+  $('#edit-project').innerHTML = '<option value="">Choose project</option>' + state.projects.map(project => `<option value="${project.id}">${escapeHTML(projectOptionLabel(project))}</option>`).join('');
   $('#edit-project').value = issue?.project_id || (state.view === 'project' ? state.project : '');
   $('#edit-label').value = issue?.label || ''; $('#edit-due').value = issue?.due_date || '';
   $('#save-issue').textContent = issue ? 'Save changes' : 'Create issue'; $('#delete-issue').hidden = !issue; $('#delete-issue').dataset.confirm = ''; $('#delete-issue').innerHTML = icon('trash') + ' Delete issue';
@@ -187,7 +197,7 @@ document.addEventListener('click', event => {
   if (target.hasAttribute('data-summary-category')) { state.status = ''; state.category = target.dataset.summaryCategory; $('#status-filter').value = ''; $('#filter-panel').hidden = false; render(); }
   if (target.hasAttribute('data-reset')) { state.search = ''; $('#issue-search').value = ''; clearFilters(); }
 });
-function clearFilters() { state.status = ''; state.category = ''; state.priority = ''; state.assignee = ''; ['status','priority','assignee'].forEach(key => $(`#${key}-filter`).value = ''); render(); }
+function clearFilters() { state.status = ''; state.category = ''; state.priority = ''; state.assignee = ''; state.institute = ''; state.projectFilter = ''; ['status','priority','assignee','institute','project'].forEach(key => $(`#${key}-filter`).value = ''); render(); }
 function focusSearch() { if (state.view === 'projects') navigate('all'); $('#sidebar').classList.remove('open'); $('#issue-search').focus(); }
 $('#main-create').addEventListener('click',() => state.view === 'projects' ? openProject() : openIssue());
 $('#sidebar-new-project').addEventListener('click',openProject);
@@ -197,7 +207,8 @@ $('#comment-form').addEventListener('submit',async event => { event.preventDefau
 $('#issue-search').addEventListener('input',event => { state.search = event.target.value; render(); });
 $('#filter-toggle').addEventListener('click',() => { $('#filter-panel').hidden = !$('#filter-panel').hidden; });
 $('#clear-filters').addEventListener('click',clearFilters);
-['status','priority','assignee'].forEach(key => $(`#${key}-filter`).addEventListener('change',event => { state[key] = event.target.value; if (key === 'status') state.category = ''; render(); }));
+['status','priority','assignee','institute'].forEach(key => $(`#${key}-filter`).addEventListener('change',event => { state[key] = event.target.value; if (key === 'status') state.category = ''; render(); }));
+$('#project-filter').addEventListener('change',event => { state.projectFilter = event.target.value; render(); });
 $('#sort-order').addEventListener('change',event => { state.sort = event.target.value; render(); });
 $('#search-trigger').addEventListener('click',focusSearch);
 ['#help-button','#top-help'].forEach(selector => $(selector).addEventListener('click',() => $('#help-dialog').showModal()));
@@ -222,9 +233,9 @@ $('#status-filter').innerHTML += options(statuses,''); $('#priority-filter').inn
 try {
   const saved = JSON.parse(sessionStorage.getItem('orbit-return-view') || 'null');
   if (saved && ['all','mine','active','projects','project','requests'].includes(saved.view)) {
-    for (const key of ['view','project','layout','search','status','category','priority','assignee','sort']) if (key in saved) state[key] = saved[key];
-    $('#issue-search').value = state.search; $('#status-filter').value = state.status; $('#priority-filter').value = state.priority; $('#sort-order').value = state.sort;
-    $('#filter-panel').hidden = ![state.status,state.category,state.priority,state.assignee].some(Boolean);
+    for (const key of ['view','project','layout','search','status','category','priority','assignee','institute','projectFilter','sort']) if (key in saved) state[key] = saved[key];
+    $('#issue-search').value = state.search; $('#status-filter').value = state.status; $('#priority-filter').value = state.priority; $('#institute-filter').value = state.institute; $('#project-filter').value = state.projectFilter; $('#sort-order').value = state.sort;
+    $('#filter-panel').hidden = !activeFilters().length;
   }
   sessionStorage.removeItem('orbit-return-view');
 } catch { sessionStorage.removeItem('orbit-return-view'); }

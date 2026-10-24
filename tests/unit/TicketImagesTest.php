@@ -21,7 +21,7 @@ final class TicketImagesTest extends CIUnitTestCase
         $store = new WorkspaceStore(':memory:');
         $client = $store->saveClient($this->account());
         $other = $store->saveClient($this->account('other@example.com'));
-        $id = $store->submitClientTicket($client, ['title' => 'Problem with screenshots', 'description' => 'Details', 'project_id' => 1], [$this->image('a'), $this->image('b')]);
+        $id = $store->submitClientTicket($client, ['title' => 'Problem with screenshots', 'description' => 'Details', 'project_id' => 1, 'due_date' => '2026-11-15'], [$this->image('a'), $this->image('b')]);
         $images = $store->ticketImages($id, $client);
         $this->assertCount(2, $images);
         $this->assertArrayNotHasKey('storage_key', $images[0]);
@@ -42,7 +42,7 @@ final class TicketImagesTest extends CIUnitTestCase
         $client = $store->saveClient($this->account());
         $before = count($store->data()['issues']);
         try {
-            $store->submitClientTicket($client, ['title' => 'Should roll back', 'description' => 'Details', 'project_id' => 1], [$this->image('a'), $this->image('a')]);
+            $store->submitClientTicket($client, ['title' => 'Should roll back', 'description' => 'Details', 'project_id' => 1, 'due_date' => '2026-11-15'], [$this->image('a'), $this->image('a')]);
             $this->fail('Duplicate storage key was allowed');
         } catch (PDOException) { $this->assertCount($before, $store->data()['issues']); }
         $this->assertSame([], $store->clientTickets($client));
@@ -53,7 +53,7 @@ final class TicketImagesTest extends CIUnitTestCase
         $store = new WorkspaceStore(':memory:');
         $client = $store->saveClient($this->account());
         foreach ([array_fill(0, 6, $this->image('a')), array_fill(0, 4, array_replace($this->image('a'), ['size' => 2 * 1024 * 1024])), [array_replace($this->image('a'), ['mime' => 'image/svg+xml'])], [array_replace($this->image('a'), ['size' => 3 * 1024 * 1024])], [array_replace($this->image('a'), ['storage_key' => '../file'])]] as $images) {
-            try { $store->submitClientTicket($client, ['title' => 'Invalid', 'description' => 'Details', 'project_id' => 1], $images); $this->fail('Invalid images accepted'); }
+            try { $store->submitClientTicket($client, ['title' => 'Invalid', 'description' => 'Details', 'project_id' => 1, 'due_date' => '2026-11-15'], $images); $this->fail('Invalid images accepted'); }
             catch (InvalidArgumentException) { $this->assertSame([], $store->clientTickets($client)); }
         }
         $this->expectException(InvalidArgumentException::class);

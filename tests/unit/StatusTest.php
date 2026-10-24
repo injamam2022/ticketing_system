@@ -30,7 +30,7 @@ final class StatusTest extends CIUnitTestCase
             $issue = $store->saveIssue(['title' => 'Default status']);
             $this->assertSame('New request', $store->issue($issue)['status']);
             $client = $store->saveClient(['name' => 'Test', 'company' => 'Test', 'email' => 'status@example.com', 'password' => 'A-client-password-123', 'projects' => [1], 'active' => '1']);
-            $ticket = $store->submitClientTicket($client, ['title' => 'Portal default', 'description' => 'Help please', 'project_id' => 1]);
+            $ticket = $store->submitClientTicket($client, ['title' => 'Portal default', 'description' => 'Help please', 'project_id' => 1, 'due_date' => '2026-11-15']);
             $this->assertSame('New request', $store->clientTicket($client, $ticket)['status']);
         } finally { $store = null; unlink($path); }
     }

@@ -22,12 +22,12 @@ final class ClientPortalTest extends CIUnitTestCase
 
     private function submit(): int
     {
-        return $this->store->submitClientTicket($this->client, ['title' => 'Help with my project', 'description' => 'A request from a client', 'project_id' => 1]);
+        return $this->store->submitClientTicket($this->client, ['title' => 'Help with my project', 'description' => 'A request from a client', 'project_id' => 1, 'due_date' => '2026-11-15']);
     }
 
     public function testSubmissionEntersStaffWorkspaceWithTrustedOwnership(): void
     {
-        $id = $this->store->submitClientTicket($this->client, ['title' => 'Client issue', 'description' => 'Details', 'project_id' => 1, 'status' => 'Done', 'assignee_id' => 2, 'client_id' => 999]);
+        $id = $this->store->submitClientTicket($this->client, ['title' => 'Client issue', 'description' => 'Details', 'project_id' => 1, 'due_date' => '2026-11-15', 'status' => 'Done', 'assignee_id' => 2, 'client_id' => 999]);
         $issue = $this->store->issue($id);
         $this->assertSame('Todo', $issue['status']);
         $this->assertNull($issue['assignee_id']);
@@ -90,7 +90,7 @@ final class ClientPortalTest extends CIUnitTestCase
         $work = $this->store->saveProject(['name' => 'Thesis portal', 'description' => 'Masters project', 'color' => '#9b8afb', 'institute_id' => $north]);
         $other = $this->store->saveProject(['name' => 'Field study', 'description' => 'Another masters project', 'color' => '#75b8e9', 'institute_id' => $south]);
         $this->store->saveClient(array_replace($this->account(), ['projects' => [1, $work, $other], 'password' => '']), $this->client);
-        $id = $this->store->submitClientTicket($this->client, ['title' => 'Help with the thesis', 'description' => 'Details', 'project_id' => $work, 'institute_id' => $north]);
+        $id = $this->store->submitClientTicket($this->client, ['title' => 'Help with the thesis', 'description' => 'Details', 'project_id' => $work, 'institute_id' => $north, 'due_date' => '2026-11-15']);
         $ticket = $this->store->clientTicket($this->client, $id);
         $this->assertSame('Northbridge Institute', $ticket['institute_name']);
         $this->assertSame('Thesis portal', $ticket['project_name']);
@@ -100,20 +100,40 @@ final class ClientPortalTest extends CIUnitTestCase
     public function testUnlinkedProjectRecordsTheInstituteTheClientChooses(): void
     {
         $north = $this->store->saveInstitute(['name' => 'Northbridge Institute']);
-        $id = $this->store->submitClientTicket($this->client, ['title' => 'Help with my project', 'description' => 'Details', 'project_id' => 1, 'institute_id' => $north]);
+        $id = $this->store->submitClientTicket($this->client, ['title' => 'Help with my project', 'description' => 'Details', 'project_id' => 1, 'institute_id' => $north, 'due_date' => '2026-11-15']);
         $this->assertSame('Northbridge Institute', $this->store->clientTicket($this->client, $id)['institute_name']);
         $this->assertSame($north, (int) $this->store->issue($id)['institute_id']);
     }
 
-    public function testChangingToAnotherInstituteRejectsThatProjectWork(): void
+    public function testClientCanFileSharedProjectWorkUnderTheirOwnInstitute(): void
     {
         $north = $this->store->saveInstitute(['name' => 'Northbridge Institute']);
         $south = $this->store->saveInstitute(['name' => 'Southbridge Institute']);
         $work = $this->store->saveProject(['name' => 'Thesis portal', 'description' => 'Masters project', 'color' => '#9b8afb', 'institute_id' => $north]);
         $this->store->saveClient(array_replace($this->account(), ['projects' => [$work], 'password' => '']), $this->client);
+        $id = $this->store->submitClientTicket($this->client, ['title' => 'Help from my institute', 'description' => 'Details', 'project_id' => $work, 'institute_id' => $south, 'due_date' => '2026-11-15']);
+        $this->assertSame('Southbridge Institute', $this->store->clientTicket($this->client, $id)['institute_name']);
+        $this->assertSame($south, (int) $this->store->issue($id)['institute_id']);
+    }
+
+    public function testLinkedProjectKeepsItsInstituteWhenTheClientDoesNotChooseOne(): void
+    {
+        $north = $this->store->saveInstitute(['name' => 'Northbridge Institute']);
+        $work = $this->store->saveProject(['name' => 'Thesis portal', 'description' => 'Masters project', 'color' => '#9b8afb', 'institute_id' => $north]);
+        $this->store->saveClient(array_replace($this->account(), ['projects' => [$work], 'password' => '']), $this->client);
+        $id = $this->store->submitClientTicket($this->client, ['title' => 'Help with the thesis', 'description' => 'Details', 'project_id' => $work, 'due_date' => '2026-11-15']);
+        $this->assertSame('Northbridge Institute', $this->store->clientTicket($this->client, $id)['institute_name']);
+        $this->assertSame($north, (int) $this->store->issue($id)['institute_id']);
+    }
+
+    public function testClientDueDateIsStoredAndInvalidDatesAreRejected(): void
+    {
+        $id = $this->submit();
+        $this->assertSame('2026-11-15', $this->store->clientTicket($this->client, $id)['due_date']);
+        $this->assertSame('2026-11-15', $this->store->issue($id)['due_date']);
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Choose the institute for this master\'s project work.');
-        $this->store->submitClientTicket($this->client, ['title' => 'Wrong institute', 'description' => 'Details', 'project_id' => $work, 'institute_id' => $south]);
+        $this->expectExceptionMessage('Choose a valid due date.');
+        $this->store->submitClientTicket($this->client, ['title' => 'Bad date', 'description' => 'Details', 'project_id' => 1, 'due_date' => '2026-02-31']);
     }
 
     public function testClientsHaveHashedPasswordsAndUniqueEmails(): void

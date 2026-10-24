@@ -31,7 +31,7 @@ class Workspace extends BaseController
         $data = $store->data();
         $this->response->setHeader('Cache-Control', 'no-store');
         return view('issue', [
-            'issue' => $issue, 'users' => $data['users'], 'projects' => $data['projects'], 'statuses' => array_column($data['statuses'], 'name'),
+            'issue' => $issue, 'users' => $data['users'], 'projects' => $data['projects'], 'institutes' => $data['institutes'], 'statuses' => array_column($data['statuses'], 'name'),
             'comments' => $store->comments($id), 'client' => $issue['client_id'] ? $store->client($issue['client_id']) : null,
             'csrf' => $this->token(),
             'discussion' => $store->discussion($id, (int) session()->get('user_id')), 'currentUser' => (int) session()->get('user_id'),

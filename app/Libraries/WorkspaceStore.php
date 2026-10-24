@@ -40,13 +40,13 @@ class WorkspaceStore
             CREATE TABLE IF NOT EXISTS login_attempts (fingerprint TEXT PRIMARY KEY, attempts INTEGER NOT NULL, started INTEGER NOT NULL);');
         StatusSchema::create($this->db);
         StatusSchema::seed($this->db);
+        InstituteSchema::migrate($this->db);
         if ($seed && !(int) $this->db->query('SELECT COUNT(*) FROM users')->fetchColumn()) {
             $this->seed();
         }
         $this->migrateClients();
         DiscussionSchema::migrate($this->db);
         TicketImages::schema($this->db);
-        InstituteSchema::migrate($this->db);
     }
 
     private function migrateClients(): void
@@ -126,7 +126,7 @@ class WorkspaceStore
     public function clientTickets(int $client): array
     {
         // Client responses deliberately exclude staff identities and internal comments.
-        return $this->run('SELECT i.id,i.title,i.description,i.status,i.priority,i.created_at,i.updated_at,p.name AS project_name,institutes.name AS institute_name FROM issues i JOIN projects p ON p.id=i.project_id JOIN client_projects cp ON cp.project_id=i.project_id AND cp.client_id=i.client_id JOIN clients c ON c.id=i.client_id LEFT JOIN institutes ON institutes.id=i.institute_id WHERE i.client_id=? AND c.active=1 ORDER BY i.id DESC', [$client])->fetchAll();
+        return $this->run('SELECT i.id,i.title,i.description,i.status,i.priority,i.due_date,i.created_at,i.updated_at,p.name AS project_name,institutes.name AS institute_name FROM issues i JOIN projects p ON p.id=i.project_id JOIN client_projects cp ON cp.project_id=i.project_id AND cp.client_id=i.client_id JOIN clients c ON c.id=i.client_id LEFT JOIN institutes ON institutes.id=i.institute_id WHERE i.client_id=? AND c.active=1 ORDER BY i.id DESC', [$client])->fetchAll();
     }
 
     public function clientTicket(int $client, int $issue): array
@@ -148,15 +148,15 @@ class WorkspaceStore
         if ($postedInstitute !== null && !filter_var($postedInstitute, FILTER_VALIDATE_INT)) { throw new InvalidArgumentException('Choose a valid institute.'); }
         $postedInstitute = $postedInstitute === null ? null : (int) $postedInstitute;
         $owner = isset($match['institute_id']) && $match['institute_id'] !== null && $match['institute_id'] !== '' ? (int) $match['institute_id'] : null;
-        if ($owner !== null && $postedInstitute !== $owner) { throw new InvalidArgumentException('Choose the institute for this master\'s project work.'); }
-        if ($owner === null && $postedInstitute !== null) {
+        // The project may be shared master's work. The institute on the ticket is the one the client chose.
+        if ($postedInstitute !== null) {
             if (!$this->institute($postedInstitute)) { throw new InvalidArgumentException('Choose a valid institute.'); }
             $owner = $postedInstitute;
         }
         $description = $input['description'] ?? '';
         if (!is_string($description) || trim($description) === '') { throw new InvalidArgumentException('Describe your request so our team can help.'); }
-        $type = $input['type'] ?? 'Support';
-        if (!in_array($type, ['Support', 'Bug', 'Feature'], true)) { throw new InvalidArgumentException('Choose a valid request type.'); }
+        $due = $input['due_date'] ?? '';
+        if (!is_string($due) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $due) || date('Y-m-d', strtotime($due)) !== $due) { throw new InvalidArgumentException('Choose a valid due date.'); }
         if (count($images) > 5) { throw new InvalidArgumentException('Attach up to 5 images per ticket.'); }
         $total = 0;
         foreach ($images as $image) {
@@ -167,7 +167,7 @@ class WorkspaceStore
         $this->db->beginTransaction();
         try {
             // Only these client-editable fields enter the staff issue system.
-            $id = $this->saveIssue(['title' => $input['title'] ?? '', 'description' => $description, 'project_id' => (int) $project, 'priority' => $input['priority'] ?? 'Medium', 'status' => $this->defaultStatus(), 'label' => $type]);
+            $id = $this->saveIssue(['title' => $input['title'] ?? '', 'description' => $description, 'project_id' => (int) $project, 'priority' => $input['priority'] ?? 'Medium', 'status' => $this->defaultStatus(), 'label' => '', 'due_date' => $due]);
             $this->run('UPDATE issues SET client_id=?, institute_id=? WHERE id=?', [$client, $owner, $id]);
             foreach ($images as $image) { $this->run('INSERT INTO ticket_images (issue_id,storage_key,filename,mime,size) VALUES (?,?,?,?,?)', [$id, $image['storage_key'], $image['filename'], $image['mime'], $image['size']]); }
             $this->db->commit();
@@ -298,7 +298,7 @@ class WorkspaceStore
     {
         $old = $id ? $this->issue($id) : [];
         if ($id && !$old) { throw new InvalidArgumentException('Issue not found.'); }
-        $value = array_merge(['title' => '', 'description' => '', 'status' => $this->defaultStatus(), 'priority' => 'No priority', 'assignee_id' => null, 'project_id' => null, 'label' => '', 'due_date' => null], $old ?: [], $input);
+        $value = array_merge(['title' => '', 'description' => '', 'status' => $this->defaultStatus(), 'priority' => 'No priority', 'assignee_id' => null, 'project_id' => null, 'institute_id' => null, 'label' => '', 'due_date' => null], $old ?: [], $input);
         foreach (['title', 'description', 'status', 'priority', 'label'] as $field) {
             if (!is_string($value[$field])) { throw new InvalidArgumentException('Invalid ' . $field . '.'); }
             $value[$field] = trim($value[$field]);
@@ -312,16 +312,20 @@ class WorkspaceStore
         }
         $date = $value['due_date'];
         if ($date && (!is_string($date) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || date('Y-m-d', strtotime($date)) !== $date)) { throw new InvalidArgumentException('Choose a valid due date.'); }
-        $fields = ['title', 'description', 'status', 'priority', 'assignee_id', 'project_id', 'label', 'due_date'];
+        $institute = $value['institute_id'] ?? null;
+        $institute = ($institute === '' || $institute === null) ? null : $institute;
+        if ($institute !== null && (!filter_var($institute, FILTER_VALIDATE_INT) || !$this->institute((int) $institute))) { throw new InvalidArgumentException('Choose a valid institute.'); }
+        $value['institute_id'] = $institute === null ? null : (int) $institute;
+        $fields = ['title', 'description', 'status', 'priority', 'assignee_id', 'project_id', 'label', 'due_date', 'institute_id'];
         $values = array_map(fn ($field) => $field === 'due_date' ? ($value[$field] ?: null) : $value[$field], $fields);
         $values[] = gmdate('c');
         if ($id) {
             $values[] = $id;
-            $this->run('UPDATE issues SET title=?, description=?, status=?, priority=?, assignee_id=?, project_id=?, label=?, due_date=?, updated_at=? WHERE id=?', $values);
+            $this->run('UPDATE issues SET title=?, description=?, status=?, priority=?, assignee_id=?, project_id=?, label=?, due_date=?, institute_id=?, updated_at=? WHERE id=?', $values);
             return $id;
         }
         $values[] = gmdate('c');
-        $this->run('INSERT INTO issues (title, description, status, priority, assignee_id, project_id, label, due_date, updated_at, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)', $values);
+        $this->run('INSERT INTO issues (title, description, status, priority, assignee_id, project_id, label, due_date, institute_id, updated_at, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)', $values);
         return (int) $this->db->lastInsertId();
     }
 

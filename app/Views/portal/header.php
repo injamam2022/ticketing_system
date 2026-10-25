@@ -9,7 +9,7 @@
 </head>
 <body class="portal-body <?= esc($bodyClass ?? '') ?>">
 <header class="portal-header">
-    <a class="brand" href="<?= site_url(($staff ?? false) ? '' : 'portal') ?>"><img class="brand-logo" src="<?= base_url('assets/jis-logo.png') ?>" alt=""><span>JIS</span> <span class="portal-brand-label"><?= ($staff ?? false) ? 'CLIENT MANAGEMENT' : 'CLIENT PORTAL' ?></span></a>
+    <a class="brand" href="<?= site_url(($staff ?? false) ? '' : 'portal') ?>"><img class="brand-logo" src="<?= base_url('assets/jis-logo.png') ?>?v=<?= filemtime(FCPATH . 'assets/jis-logo.png') ?>" alt="JIS GROUP"><span class="portal-brand-label"><?= ($staff ?? false) ? 'CLIENT MANAGEMENT' : 'CLIENT PORTAL' ?></span></a>
     <nav aria-label="Portal navigation">
     <?php if ($staff ?? false): ?>
         <a href="<?= site_url() ?>">← Workspace</a><a href="<?= site_url('team') ?>">Team</a><a href="<?= site_url('clients') ?>">Clients</a><a href="<?= site_url('statuses') ?>">Manage statuses</a><a href="<?= site_url('institutes') ?>">Masters</a>

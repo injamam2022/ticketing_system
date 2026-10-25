@@ -17,10 +17,8 @@
 .ticket-image-tile span { display:block; font-size:12px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; margin:9px 2px 3px; }
 .ticket-image-tile small { font-size:10px; color:#968c9f; margin-left:2px; }
 @media(max-width:480px) { .ticket-images-section { padding:18px; } .ticket-image-gallery { grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; } .ticket-image-tile img { height:110px; } }
-.brand-logo,.jis-mark{display:block;object-fit:contain;background:#000;flex-shrink:0}
-.brand-logo{width:46px;height:46px;border-radius:10px}
-.jis-mark{width:26px;height:26px;border-radius:6px}
+.brand-logo,.jis-mark{display:block;object-fit:contain;background:#fff;flex-shrink:0}.brand-logo{width:52px;height:auto;max-height:56px;border-radius:10px;padding:4px}.jis-mark{width:28px;height:auto;max-height:28px;border-radius:6px;padding:2px;background:#fff}.brand .workspace-plan{margin-left:2px}
 .mini-logo{background:transparent;transform:none;width:auto;height:auto;line-height:0;border-radius:0;margin-bottom:22px}
-.mini-logo img{width:92px;height:92px;display:block;object-fit:contain;border-radius:18px}
+.mini-logo img{width:110px;height:auto;max-height:110px;display:block;object-fit:contain;border-radius:14px;background:#fff;padding:6px}
 
 .project-card{position:relative;display:flex;flex-direction:column;padding:0;overflow:hidden}.project-card-actions{position:absolute;top:10px;right:10px;z-index:2;display:flex;gap:4px;opacity:0;transition:opacity .15s}.project-card:hover .project-card-actions,.project-card:focus-within .project-card-actions{opacity:1}.project-card-actions .icon-button{width:30px;height:30px;background:#1c1c23cc;border:1px solid #34343e;border-radius:7px}.project-card-actions .icon-button:hover{background:#2a2a33;border-color:#6b577e}.project-card-body{display:block;width:100%;padding:22px;text-align:left;background:transparent;border:0;color:inherit;cursor:pointer}.project-dialog .dialog-footer{justify-content:space-between;gap:12px}.project-dialog .dialog-footer>div{display:flex;gap:8px;margin-left:auto}

@@ -88,7 +88,8 @@ class Workspace extends BaseController
     public function deleteIssue(int $id) { return $this->api(function ($store) use ($id) { $store->deleteIssue($id); return ['ok' => true]; }); }
     public function comments(int $id) { return $this->api(fn ($store) => ['comments' => $store->comments($id)]); }
     public function addComment(int $id) { return $this->api(function ($store) use ($id) { $store->addComment($id, (int) session()->get('user_id'), $this->payload()['body'] ?? ''); return ['ok' => true]; }); }
-    public function saveProject() { return $this->api(fn ($store) => ['id' => $store->saveProject($this->payload())]); }
+    public function saveProject(?int $id = null) { return $this->api(fn ($store) => ['id' => $store->saveProject($this->payload(), $id)]); }
+    public function deleteProject(int $id) { return $this->api(function ($store) use ($id) { $store->deleteProject($id); return ['ok' => true]; }); }
 
     private function conversationResponse(WorkspaceStore $store, int $id): array
     {

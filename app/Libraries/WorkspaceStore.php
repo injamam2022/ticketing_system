@@ -347,17 +347,40 @@ class WorkspaceStore
         $this->run('INSERT INTO comments (issue_id,user_id,body,created_at) VALUES (?,?,?,?)', [$issue, $user, trim($body), gmdate('c')]);
     }
 
-    public function saveProject(array $input): int
+    public function project(int $id): array|false
     {
+        return $this->run('SELECT projects.*, institutes.name AS institute_name FROM projects LEFT JOIN institutes ON institutes.id = projects.institute_id WHERE projects.id=?', [$id])->fetch();
+    }
+
+    public function saveProject(array $input, ?int $id = null): int
+    {
+        if ($id && !$this->project($id)) { throw new InvalidArgumentException('Project not found.'); }
         $name = $input['name'] ?? '';
         $description = $input['description'] ?? '';
         $color = $input['color'] ?? '#9b8afb';
         if (!is_string($name) || trim($name) === '' || mb_strlen($name) > 80 || !is_string($description) || mb_strlen($description) > 1000 || !is_string($color) || !preg_match('/^#[a-fA-F0-9]{6}$/', $color)) { throw new InvalidArgumentException('Enter a project name (up to 80 characters), description (up to 1,000), and valid color.'); }
-        $institute = $input['institute_id'] ?? null;
+        $institute = array_key_exists('institute_id', $input) ? $input['institute_id'] : ($id ? ($this->project($id)['institute_id'] ?? null) : null);
         $institute = ($institute === '' || $institute === null) ? null : $institute;
         if ($institute !== null && (!filter_var($institute, FILTER_VALIDATE_INT) || !$this->institute((int) $institute))) { throw new InvalidArgumentException('Choose a valid institute.'); }
-        $this->run('INSERT INTO projects (name,description,color,institute_id) VALUES (?,?,?,?)', [trim($name), trim($description), $color, $institute === null ? null : (int) $institute]);
+        $institute = $institute === null ? null : (int) $institute;
+        if ($id) {
+            $this->run('UPDATE projects SET name=?, description=?, color=?, institute_id=? WHERE id=?', [trim($name), trim($description), $color, $institute, $id]);
+            return $id;
+        }
+        $this->run('INSERT INTO projects (name,description,color,institute_id) VALUES (?,?,?,?)', [trim($name), trim($description), $color, $institute]);
         return (int) $this->db->lastInsertId();
+    }
+
+    public function deleteProject(int $id): void
+    {
+        if (!$this->project($id)) { throw new InvalidArgumentException('Project not found.'); }
+        $this->db->beginTransaction();
+        try {
+            $this->run('UPDATE issues SET project_id=NULL WHERE project_id=?', [$id]);
+            $this->run('DELETE FROM client_projects WHERE project_id=?', [$id]);
+            $this->run('DELETE FROM projects WHERE id=?', [$id]);
+            $this->db->commit();
+        } catch (\Throwable $error) { $this->db->rollBack(); throw $error; }
     }
 
     public function institute(int $id): array|false

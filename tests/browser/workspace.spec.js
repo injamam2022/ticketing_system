@@ -86,9 +86,18 @@ test('search, filters, projects, and keyboard shortcuts', async ({page}) => {
   await page.locator('#project-form button[type=submit]').click();
   await expect(page.locator('#page-title')).toContainText(project);
   await expect(page.getByRole('heading',{name:'A little room for what’s next'})).toBeVisible();
+  await page.locator('[data-view=projects]').click();
+  const card = page.locator('.project-card').filter({hasText:project});
+  await card.locator('[data-edit-project]').click();
+  await expect(page.locator('#project-dialog-title')).toHaveText('Edit project');
+  await page.locator('#project-form [name=name]').fill(project + ' updated');
+  await page.locator('#project-save').click();
+  await expect(card).toContainText(project + ' updated');
+  page.once('dialog', dialog => dialog.accept());
+  await card.locator('[data-delete-project]').click();
+  await expect(page.locator('.project-card').filter({hasText:project + ' updated'})).toHaveCount(0);
   await page.keyboard.press('c');
   await expect(page.locator('#issue-dialog')).toBeVisible();
-  await expect(page.locator('#edit-project option:checked')).toHaveText(project);
   await page.keyboard.press('Escape');
 });
 

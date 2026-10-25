@@ -13,6 +13,7 @@ const paths = {
   menu:'M4 6h16M4 12h16M4 18h16',status:'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0',priority:'M5 18v-4M12 18V9M19 18V4',
   user:'M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0M4 21v-2a8 8 0 0 1 16 0v2',tag:'M3 3h8l10 10-8 8L3 11V3ZM7 7h.01',
   calendar:'M8 2v4M16 2v4M3 10h18M3 4h18v17H3z',trash:'M3 6h18M5 6l1 15h12l1-15M9 6V3h6v3M10 10v7M14 10v7',
+  edit:'M4 20h4L18 10l-4-4L4 16v4ZM14 6l4 4',
   send:'m22 2-7 20-4-9-9-4 20-7ZM11 13 22 2',chevron:'m9 5 7 7-7 7',down:'m6 9 6 6 6-6',check:'m5 12 4 4L19 6',sparkles:'m12 3 3 6 6 3-6 3-3 6-3-6-6-3 6-3 3-6'
 };
 const icon = name => `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="${paths[name] || paths.box}"/></svg>`;
@@ -24,7 +25,7 @@ const statusCategory = name => statusDefinitions.find(status => status.name === 
 const isClosed = name => ['done','canceled'].includes(statusCategory(name));
 const priorities = ['No priority','Urgent','High','Medium','Low'];
 const labelColors = {'Feature':'#ab92d5','Bug':'#d4838d','Design':'#78a7ce','Improvement':'#d0ac71'};
-const state = {issues:[],projects:[],users:[],institutes:[],currentUser:1,view:'all',project:null,layout:localStorage.getItem('orbit-layout') === 'board' ? 'board' : 'list',search:'',category:'',status:'',priority:'',assignee:'',institute:'',projectFilter:'',sort:'newest',editing:null,collapsed:new Set(),ready:false};
+const state = {issues:[],projects:[],users:[],institutes:[],currentUser:1,view:'all',project:null,layout:localStorage.getItem('orbit-layout') === 'board' ? 'board' : 'list',search:'',category:'',status:'',priority:'',assignee:'',institute:'',projectFilter:'',sort:'newest',editing:null,editingProject:null,collapsed:new Set(),ready:false};
 const activeFilters = () => [state.status,state.category,state.priority,state.assignee,state.institute,state.projectFilter].filter(Boolean);
 const initials = name => name.split(' ').map(word => word[0]).slice(0,2).join('');
 const avatar = user => user ? `<span class="avatar" style="--avatar:${escapeHTML(user.color)}" title="${escapeHTML(user.name)}">${escapeHTML(initials(user.name))}</span>` : `<span class="avatar unassigned" title="Unassigned">${icon('user')}</span>`;
@@ -34,7 +35,7 @@ const label = value => value ? `<span class="issue-label" style="--label-color:$
 const userFor = id => state.users.find(user => Number(user.id) === Number(id));
 const projectFor = id => state.projects.find(project => Number(project.id) === Number(id));
 const instituteFor = id => (state.institutes || []).find(institute => Number(institute.id) === Number(id));
-const projectOptionLabel = project => project.institute_name ? `${project.name} · ${project.institute_name}` : project.name;
+const projectOptionLabel = project => project.name;
 const code = id => `ORB-${String(id).padStart(3,'0')}`;
 let toastTimer;
 function toast(message) { const el = $('#toast'); el.textContent = message; el.classList.add('visible'); clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('visible'), 3800); }
@@ -124,7 +125,7 @@ function renderBoard(issues) {
   $('#issue-content').innerHTML = `<div class="board-wrap"><div class="board">${statuses.map(status => `<section class="board-column" data-drop-status="${escapeHTML(status)}">${groupHeading(status,issues.filter(issue => issue.status === status).length,true)}${issues.filter(issue => issue.status === status).map(issue => `<article class="board-card" draggable="true" tabindex="0" role="button" data-issue="${issue.id}" aria-label="${escapeHTML(code(issue.id) + ': ' + issue.title)}"><div class="board-card-header"><span class="issue-id">${code(issue.id)}</span>${priorityIcon(issue.priority)}</div><h3>${escapeHTML(issue.title)}</h3><div class="board-card-footer">${label(issue.label) || '<span></span>'}${avatar(userFor(issue.assignee_id))}</div></article>`).join('')}<button class="board-add" data-new-status="${escapeHTML(status)}">${icon('plus')} Add issue</button></section>`).join('')}</div></div>`;
 }
 function renderProjects() {
-  $('#issue-content').innerHTML = `<div class="projects-grid">${state.projects.map(project => { const issues = state.issues.filter(issue => Number(issue.project_id) === Number(project.id)); const done = issues.filter(issue => statusCategory(issue.status) === 'done').length; const percent = issues.length ? Math.round(done/issues.length*100) : 0; return `<button class="project-card" data-project="${project.id}" style="--project-color:${escapeHTML(project.color)}"><div class="project-card-icon">${icon('box')}</div><h2>${escapeHTML(project.name)}</h2><p>${escapeHTML(project.description || 'Your next big thing starts here.')}</p><div class="project-card-progress"><i style="width:${percent}%"></i></div><div class="project-card-stats"><span>${issues.length} issues · ${done} completed</span><span>${percent}%</span></div></button>`; }).join('')}</div>`;
+  $('#issue-content').innerHTML = `<div class="projects-grid">${state.projects.map(project => { const issues = state.issues.filter(issue => Number(issue.project_id) === Number(project.id)); const done = issues.filter(issue => statusCategory(issue.status) === 'done').length; const percent = issues.length ? Math.round(done/issues.length*100) : 0; return `<article class="project-card" style="--project-color:${escapeHTML(project.color)}"><div class="project-card-actions"><button type="button" class="icon-button" data-edit-project="${project.id}" aria-label="Edit ${escapeHTML(project.name)}" title="Edit project">${icon('edit')}</button><button type="button" class="icon-button" data-delete-project="${project.id}" aria-label="Delete ${escapeHTML(project.name)}" title="Delete project">${icon('trash')}</button></div><button type="button" class="project-card-body" data-project="${project.id}"><div class="project-card-icon">${icon('box')}</div><h2>${escapeHTML(project.name)}</h2><p>${escapeHTML(project.description || 'Your next big thing starts here.')}</p><div class="project-card-progress"><i style="width:${percent}%"></i></div><div class="project-card-stats"><span>${issues.length} issues · ${done} completed</span><span>${percent}%</span></div></button></article>`; }).join('')}</div>`;
 }
 function options(values, selected) { return values.map(value => `<option value="${escapeHTML(value)}" ${value === selected ? 'selected' : ''}>${escapeHTML(value)}</option>`).join(''); }
 function openIssue(id = null, status = null) {
@@ -167,7 +168,47 @@ async function loadComments(id) {
     $('#comments-list').innerHTML = data.comments.length ? data.comments.map(comment => `<div class="comment">${avatar(comment)}<div><strong>${escapeHTML(comment.name)}</strong><time>${new Date(comment.created_at).toLocaleDateString(undefined,{month:'short',day:'numeric'})}</time><p>${escapeHTML(comment.body)}</p></div></div>`).join('') : '<p class="no-comments">Start the conversation. Share an update or ask a question.</p>';
   } catch (error) { toast(error.message); }
 }
-function openProject() { $('#project-form').reset(); $('#project-error').hidden = true; $('#project-dialog').showModal(); }
+function openProject(id = null) {
+  const project = id ? projectFor(id) : null;
+  state.editingProject = project?.id || null;
+  $('#project-form').reset();
+  $('#project-error').hidden = true;
+  $('#project-dialog-title').textContent = project ? 'Edit project' : 'Create a project';
+  $('#project-dialog-copy').textContent = project ? 'Update the name, description, institute, or color.' : 'Give your next big idea a place to grow.';
+  $('#project-institute').innerHTML = '<option value="">No institute</option>' + (state.institutes || []).map(institute => `<option value="${institute.id}">${escapeHTML(institute.name)}</option>`).join('');
+  if (project) {
+    $('#project-form [name=name]').value = project.name || '';
+    $('#project-form [name=description]').value = project.description || '';
+    $('#project-form [name=color]').value = project.color || '#9b8afb';
+    $('#project-institute').value = project.institute_id || '';
+  }
+  $('#project-save').textContent = project ? 'Save changes' : 'Create project';
+  $('#delete-project').hidden = !project;
+  $('#delete-project').dataset.confirm = '';
+  $('#delete-project').innerHTML = icon('trash') + ' Delete project';
+  hydrateIcons($('#project-dialog'));
+  $('#project-dialog').showModal();
+  $('#project-form [name=name]').focus();
+}
+async function deleteProject(id = state.editingProject) {
+  const project = projectFor(id);
+  if (!project) return;
+  const button = $('#delete-project');
+  if (button && !button.hidden && Number(state.editingProject) === Number(id) && button.dataset.confirm !== 'yes') {
+    button.dataset.confirm = 'yes';
+    button.innerHTML = icon('trash') + ' Confirm delete';
+    return;
+  }
+  if (!button?.dataset.confirm && !confirm(`Delete “${project.name}”? Issues stay in the workspace without this project. Client access to it is removed.`)) return;
+  try {
+    await api(`projects/${id}/delete`, {});
+    $('#project-dialog').close();
+    await refresh();
+    if (state.view === 'project' && Number(state.project) === Number(id)) navigate('projects');
+    else if (state.view === 'projects') render();
+    toast('Project deleted');
+  } catch (error) { if (!$('#project-dialog').open) toast(error.message); else showError('#project-error', error); }
+}
 function showError(selector, error) { const el = $(selector); el.textContent = error.message; el.hidden = false; }
 async function saveIssue(event) {
   event.preventDefault(); const button = $('#save-issue'); button.disabled = true; $('#issue-error').hidden = true;
@@ -191,6 +232,8 @@ document.addEventListener('click', event => {
   if (target.hasAttribute('data-new-status')) openIssue(null,target.dataset.newStatus);
   if (target.hasAttribute('data-issue')) openIssue(target.dataset.issue);
   if (target.hasAttribute('data-view')) navigate(target.dataset.view);
+  if (target.hasAttribute('data-edit-project')) { openProject(Number(target.dataset.editProject)); return; }
+  if (target.hasAttribute('data-delete-project')) { deleteProject(Number(target.dataset.deleteProject)); return; }
   if (target.hasAttribute('data-project')) navigate('project',Number(target.dataset.project));
   if (target.hasAttribute('data-layout')) { state.layout = target.dataset.layout; localStorage.setItem('orbit-layout',state.layout); render(); }
   if (target.hasAttribute('data-collapse')) { const status = target.dataset.collapse; state.collapsed.has(status) ? state.collapsed.delete(status) : state.collapsed.add(status); render(); }
@@ -202,7 +245,8 @@ function focusSearch() { if (state.view === 'projects') navigate('all'); $('#sid
 $('#main-create').addEventListener('click',() => state.view === 'projects' ? openProject() : openIssue());
 $('#sidebar-new-project').addEventListener('click',openProject);
 $('#issue-form').addEventListener('submit',saveIssue); $('#delete-issue').addEventListener('click',deleteIssue);
-$('#project-form').addEventListener('submit',async event => { event.preventDefault(); const button = $('button[type=submit]',event.target); button.disabled = true; try { const result = await api('projects',Object.fromEntries(new FormData(event.target))); $('#project-dialog').close(); await refresh(); navigate('project',result.id); toast('Project created'); } catch(error) { showError('#project-error',error); } finally { button.disabled = false; } });
+$('#project-form').addEventListener('submit',async event => { event.preventDefault(); const button = $('#project-save'); button.disabled = true; $('#project-error').hidden = true; const id = state.editingProject; try { const result = await api(`projects${id ? '/' + id : ''}`,Object.fromEntries(new FormData(event.target))); $('#project-dialog').close(); await refresh(); if (id) { if (state.view === 'projects') render(); else if (state.view === 'project' && Number(state.project) === Number(id)) { renderNavigation(); render(); } toast('Project updated'); } else { navigate('project',result.id); toast('Project created'); } } catch(error) { showError('#project-error',error); } finally { button.disabled = false; } });
+$('#delete-project').addEventListener('click',() => deleteProject());
 $('#comment-form').addEventListener('submit',async event => { event.preventDefault(); const button = $('button',event.target); const id = state.editing; button.disabled = true; try { await api(`issues/${id}/comments`,{body:$('#comment-body').value}); if (state.editing === id) { $('#comment-body').value = ''; await loadComments(id); } toast('Comment added'); } catch(error) { toast(error.message); } finally { button.disabled = false; } });
 $('#issue-search').addEventListener('input',event => { state.search = event.target.value; render(); });
 $('#filter-toggle').addEventListener('click',() => { $('#filter-panel').hidden = !$('#filter-panel').hidden; });

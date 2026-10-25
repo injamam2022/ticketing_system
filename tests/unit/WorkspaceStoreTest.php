@@ -52,6 +52,21 @@ final class WorkspaceStoreTest extends CIUnitTestCase
         $this->store->saveIssue(['title' => 'Bad institute', 'institute_id' => 99999]);
     }
 
+    public function testProjectCanBeUpdatedAndDeleted(): void
+    {
+        $institute = $this->store->saveInstitute(['name' => 'Northbridge Institute']);
+        $id = $this->store->saveProject(['name' => 'Portal', 'description' => 'First draft', 'color' => '#75b8e9', 'institute_id' => $institute]);
+        $issue = $this->store->saveIssue(['title' => 'Linked work', 'project_id' => $id]);
+        $this->store->saveProject(['name' => 'Client portal', 'description' => 'Updated brief', 'color' => '#9b8afb', 'institute_id' => ''], $id);
+        $project = $this->store->project($id);
+        $this->assertSame('Client portal', $project['name']);
+        $this->assertSame('Updated brief', $project['description']);
+        $this->assertNull($project['institute_id']);
+        $this->store->deleteProject($id);
+        $this->assertFalse($this->store->project($id));
+        $this->assertNull($this->store->issue($issue)['project_id']);
+    }
+
     public function testInvalidDateIsRejected(): void
     {
         $this->expectException(InvalidArgumentException::class);

@@ -19,6 +19,8 @@ $routes->post('api/issues/(:num)/delete', 'Workspace::deleteIssue/$1');
 $routes->get('api/issues/(:num)/comments', 'Workspace::comments/$1');
 $routes->post('api/issues/(:num)/comments', 'Workspace::addComment/$1');
 $routes->post('api/projects', 'Workspace::saveProject');
+$routes->post('api/projects/(:num)', 'Workspace::saveProject/$1');
+$routes->post('api/projects/(:num)/delete', 'Workspace::deleteProject/$1');
 $routes->get('api/issues/(:num)/client-conversation', 'Workspace::clientConversation/$1');
 $routes->post('api/issues/(:num)/client-conversation', 'Workspace::replyToClient/$1');
 $routes->get('portal/tickets/(:num)/updates', 'ClientPortal::updates/$1');

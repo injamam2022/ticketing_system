@@ -22,3 +22,5 @@
 .jis-mark{width:26px;height:26px;border-radius:6px}
 .mini-logo{background:transparent;transform:none;width:auto;height:auto;line-height:0;border-radius:0;margin-bottom:22px}
 .mini-logo img{width:92px;height:92px;display:block;object-fit:contain;border-radius:18px}
+
+.project-card{position:relative;display:flex;flex-direction:column;padding:0;overflow:hidden}.project-card-actions{position:absolute;top:10px;right:10px;z-index:2;display:flex;gap:4px;opacity:0;transition:opacity .15s}.project-card:hover .project-card-actions,.project-card:focus-within .project-card-actions{opacity:1}.project-card-actions .icon-button{width:30px;height:30px;background:#1c1c23cc;border:1px solid #34343e;border-radius:7px}.project-card-actions .icon-button:hover{background:#2a2a33;border-color:#6b577e}.project-card-body{display:block;width:100%;padding:22px;text-align:left;background:transparent;border:0;color:inherit;cursor:pointer}.project-dialog .dialog-footer{justify-content:space-between;gap:12px}.project-dialog .dialog-footer>div{display:flex;gap:8px;margin-left:auto}
